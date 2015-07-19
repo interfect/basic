@@ -20,6 +20,7 @@
 				text-shadow: 0 0 3px green;
 				padding: 3px;
 				overflow: hidden;
+				white-space: pre-wrap;
 			}
 			
 			#input {
@@ -58,102 +59,150 @@
 			
 			// Define functions for each command
 			var command_functions = {
-				"LIST": function() {
-					// List all the lines in the program
-					for(line_number in program) {
-						print(line_number.toString().concat(" ").concat(program[line_number]));
+				"LIST": {
+					"help": "PRINT THE PROGRAM",
+					"do": function() {
+						// List all the lines in the program
+						for(line_number in program) {
+							print(line_number.toString().concat(" ").concat(program[line_number]));
+							print_newline();
+						}
+					}
+				},
+				"PRINT": { 
+					"help": "PRINT THE GIVEN STRING",
+					"do": function(args) {
+						// Print out the given tokens
+						var to_print = "";
+						while(args.length > 0) {
+							parts = scan_token(args);
+							token = parts[0];
+							args = parts[1];
+							
+							if(token == ",") {
+								// For commas, print spaces
+								to_print = to_print.concat(" ");
+							} else if(token[0] == "\"") {
+								// For strings, put them without quotes
+								to_print = to_print.concat(token.substr(1, token.length - 2));
+							} else {
+								// It must be a variable
+								if(!variables.hasOwnProperty(token)) {
+									throw "UNKNOWN VARIABLE\"".concat(token, "\"");
+								}
+								to_print = to_print.concat(variables[token]);
+							}
+						}
+						
+						// Actually print
+						print(to_print);
 						print_newline();
 					}
 				},
-				"PRINT": function(args) {
-					// Print out the given tokens
-					var to_print = "";
-					while(args.length > 0) {
+				"RUN": {
+					"help": "RUN THE PROGRAM",
+					"do": function(args) {
+						if(Object.keys(program).length == 0) {
+							throw "NO PROGRAM";
+						}
+						
+						if(running == false) {
+							// Start the program running
+							line_number = Object.keys(program)[0];
+							running = true;
+							variables = {};
+							
+							// Hide the input
+							input.style.visibility = "hidden";
+							input.disabled = true;
+							
+							// Do a tick every 10 ms
+							running_timeout = window.setTimeout(run_tick, 10);
+						} else {
+							// Just reset to start
+							line_number = Object.keys(program)[0];
+						}
+						
+					}
+				},
+				"END": {
+					"help": "END THE PROGRAM",
+					"do": function(args) {
+						// Stop the program running
+						running = false;
+						window.clearTimeout(running_timeout);
+						running_timeout = null;
+						
+						// Bring back the input
+						input.style.visibility = "visible";
+						input.disabled = false;
+						input.focus();
+					}
+				},
+				"GOTO": {
+					"help": "GO TO THE SPECIFIED LINE IN THE PROGRAM",
+					"do": function(args) {
 						parts = scan_token(args);
 						token = parts[0];
 						args = parts[1];
 						
-						if(token == ",") {
-							// For commas, print spaces
-							to_print = to_print.concat(" ");
-						} else if(token[0] == "\"") {
-							// For strings, put them without quotes
-							to_print = to_print.concat(token.substr(1, token.length - 2));
-						} else {
-							// It must be a variable
-							if(!variables.hasOwnProperty(token)) {
-								throw "UNKNOWN VARIABLE\"".concat(token, "\"");
-							}
-							to_print = to_print.concat(variables[token]);
+						if(!is_integer(token)) {
+							throw "EXPECTED: INTEGER";
+						}
+						
+						if(!running) {
+							throw "PROGRAM IS STOPPED";
+						}
+						
+						// Just set the line number
+						line_number = parseInt(token);
+					}
+				},
+				"CLS": {
+					"help": "CLEAR THE SCREEN",
+						"do": function(args) {
+						// Clear the screen, by removing all the children before the input box.
+						while (term.firstChild && term.firstChild != input) {
+							term.removeChild(term.firstChild);
 						}
 					}
-					
-					// Actually print
-					print(to_print);
-					print_newline();
 				},
-				"RUN": function(args) {
-					if(Object.keys(program).length == 0) {
-						throw "NO PROGRAM";
-					}
-					
-					if(running == false) {
-						// Start the program running
-						line_number = Object.keys(program)[0];
-						running = true;
-						variables = {};
+				"HELP": {
+					"help": "GET HELP IN GENERAL OR ON A COMMAND",
+					"do": function(args) {
+						parts = scan_token(args);
+						token = parts[0];
+						args = parts[1];
 						
-						// Hide the input
-						input.style.visibility = "hidden";
-						input.disabled = true;
-						
-						// Do a tick every 10 ms
-						running_timeout = window.setTimeout(run_tick, 10);
-					} else {
-						// Just reset to start
-						line_number = Object.keys(program)[0];
+						if(token === null) {
+							// Print general help
+							center_line("", "*");
+							center_line("NOVAK BASIC 1.0");
+							center_line("", "*");
+							print_newline();
+							print_line("TO ADD A LINE, TYPE THE LINE NUMBER BEFORE THE COMMAND:");
+							print_newline();
+							print_line("    10 PRINT \"HELLO\"");
+							print_newline();
+							print_line("TO DELETE A LINE, TYPE THE LINE NUMBER ALONE:");
+							print_newline();
+							print_line("    10");
+							print_newline();
+							print_line("TO STOP A PROGRAM, PRESS ESCAPE.")
+							print_newline();
+							print("COMMANDS: ".concat(Object.keys(command_functions).join(", ")));
+							print_newline();
+						} else {
+							if(command_functions.hasOwnProperty(token)) {
+								// Document a command
+								print(command_functions[token].help);
+								print_newline();
+							} else {
+								// No idea what this is.
+								throw "UNKNOWN HELP TOPIC";
+							}
+						}
 					}
-					
-				},
-				"END": function(args) {
-					// Stop the program running
-					running = false;
-					window.clearTimeout(running_timeout);
-					running_timeout = null;
-					
-					// Bring back the input
-					input.style.visibility = "visible";
-					input.disabled = false;
-					input.focus();
-				},
-				"GOTO": function(args) {
-					parts = scan_token(args);
-					token = parts[0];
-					args = parts[1];
-					
-					if(!is_integer(token)) {
-						throw "EXPECTED: INTEGER";
-					}
-					
-					if(!running) {
-						throw "PROGRAM IS STOPPED";
-					}
-					
-					// Just set the line number
-					line_number = parseInt(token);
-				},
-				"HELP": function(args) {
-					print_line("NOVAK BASIC 1.0");
-					print_line("TO ADD A LINE, TYPE THE LINE NUMBER BEFORE THE COMMAND:");
-					print_newline();
-					print_line("    10 PRINT \"HELLO\"");
-					print_newline();
-					print_line("TO DELETE A LINE, TYPE THE LINE NUMBER ALONE:");
-					print_newline();
-					print_line("    10");
-					print_newline();
-					print("COMMANDS: ".concat(Object.keys(command_functions).join(", ")));
-					print_newline();
 				}
 			};
 			
@@ -168,7 +217,7 @@
 				
 					if(line_number === null) {
 						// We did all the lines
-						command_functions["END"]();
+						command_functions["END"].do();
 						return;
 					}
 				
@@ -203,7 +252,7 @@
 					print_newline();
 					console.log(error);
 					// End program execution
-					command_functions["END"]();
+					command_functions["END"].do();
 				}
 			};
 			
@@ -213,8 +262,19 @@
 			
 			// Print some text to the term
 			var print = function(text) {
+				var rest = "";
+				if(text.length > 80) {
+					// Wrap!
+					rest = text.substr(81);
+					text = text.substr(0, 80);
+				}
 				term.insertBefore(document.createTextNode(text), input);
 				input.scrollIntoView(false);
+				if(rest.length > 0) {
+					// Recurse for next line
+					print_newline();
+					print(rest);
+				}
 			}
 			
 			// Drop down to a new line
@@ -225,6 +285,33 @@
 			// Print a whole line
 			var print_line = function(line) {
 				print(line);
+				print_newline();
+			}
+			
+			// Print a whole line, centered
+			var center_line = function(line, pad_char) {
+				if(pad_char === undefined) {
+					// Default to padding with spaces.
+					pad_char = " ";
+				}
+			
+				// Work out the padding on either side.
+				var remaining = 80 - line.length;
+				var left = Math.floor(remaining/2);
+				var right = left + (remaining % 2);
+				
+				centered = "";
+				for(var i = 0; i < left; i++) {
+					centered = centered.concat(pad_char);
+				}
+				
+				centered = centered.concat(line);
+				
+				for(var i = 0; i < left; i++) {
+					centered = centered.concat(pad_char);
+				}
+				
+				print(centered);
 				print_newline();
 			}
 			
@@ -317,7 +404,7 @@
 					throw "UNKNOWN COMMAND \"".concat(token, "\"");
 				}
 				
-				command_functions[token](command);
+				command_functions[token].do(command);
 			}
 			
 			main = function() {
@@ -388,13 +475,15 @@
 						running = false;
 					}
 				});
+				
+				document.addEventListener("click", function(event) {
+					input.focus();
+				});
 			};
 		
 		</script>
 	</head>
 	<body onLoad="main();">
-		<div id="term">
-			<textarea rows="1" id="input"></textarea>
-		</div>
+		<div id="term"><textarea rows="1" id="input"></textarea></div>
 	</body>
 </html>
