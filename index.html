@@ -5,17 +5,25 @@
 		<style>
 			body {
 				background-color: black;
+				font-family: monospace;
 			}
 			
 			#term {
 				color: green;
-				font-family: monospace;
 				width: 80ch;
 				height: 40em;
-				margin-left: auto;
-				margin-right: auto;
-				margin-top: auto;
-				margin-bottom: auto;
+				
+				padding: 20px;
+
+				position: absolute;
+				top: 50%;
+				left: 50%;
+
+				margin: -40ch 0 0 -20em;
+				margin: calc(-40ch-3px) 0 0 calc(-20em-3px);
+				margin: -webkit-calc(-40ch-3px) 0 0 -webkit-calc(-20em-3px);
+				margin: -moz-calc(-40ch-3px) 0 0 -moz-calc(-20em-3px);
+				
 				border: 1px solid green;
 				text-shadow: 0 0 3px green;
 				padding: 3px;
@@ -188,7 +196,7 @@
 							print_newline();
 							print_line("    10");
 							print_newline();
-							print_line("TO STOP A PROGRAM, PRESS ESCAPE.")
+							print_line("TO START THE PROGRAM, TYPE \"RUN\". TO STOP THE PROGRAM, PRESS ESCAPE.")
 							print_newline();
 							print("COMMANDS: ".concat(Object.keys(command_functions).join(", ")));
 							print_newline();
